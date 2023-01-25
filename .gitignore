@@ -1,7 +1,3 @@
-# Ignore gitignore
-*.gitignore
-.gitignore
-
 # Ignore ALL .log files
 *.log
 
