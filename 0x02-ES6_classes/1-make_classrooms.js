@@ -1,6 +1,6 @@
-import Classroom from './0-classroom';
+import Classroom from './0-classroom.js';
 
-function initializeRooms() {
+export default function initializeRooms() {
   
     let c1 = new Classroom(19),
     let c2 = new Classroom(20),
