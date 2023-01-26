@@ -8,5 +8,3 @@ export default function initializeRooms() {
     
     return [c1, c2, c3];
 }
-
-export default initializeRooms;
