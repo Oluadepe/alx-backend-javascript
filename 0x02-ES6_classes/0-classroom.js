@@ -1,6 +1,8 @@
-/* 
-class named "ClassRoom" implmented with one attribute named "maxStudentsSize (Number)" and assigned to "_maxStudentsSize"	
+/*
+  This is the definition of a classRoom,
+  with a default initializer maxStudentsSize
 */
+
 class ClassRoom {
   constructor(maxStudentsSize) {
     this._maxStudentsSize = maxStudentsSize;
