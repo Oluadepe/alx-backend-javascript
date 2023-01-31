@@ -7,5 +7,3 @@ export default function getListStudents() {
 
 	return arr;
 }
-
-export
