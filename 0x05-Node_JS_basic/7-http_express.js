@@ -1,83 +1,96 @@
-const fs = require('fs');
-const csv = require('csv-parser');
 const express = require('express');
+const fs = require('fs');
 
 const app = express();
-const PORT = 1245; // Specify the port number for the server to listen on
+const PORT = 1245;
+const DB_FILE = process.argv.length > 2 ? process.argv[2] : '';
 
-// Function to read CSV file and return an array of student objects
-const readCSV = (filename, callback) => {
-  const students = [];
-  fs.createReadStream(filename)
-    .pipe(csv())
-    .on('data', (data) => {
-      students.push(data);
-    })
-    .on('end', () => {
-      callback(null, students);
-    })
-    .on('error', (error) => {
-      callback(error);
+/**
+ * Counts the students in a CSV data file.
+ * @param {String} dataPath The path to the CSV data file.
+ * @author Bezaleel Olakunori <https://github.com/B3zaleel>
+ */
+const countStudents = (dataPath) => new Promise((resolve, reject) => {
+  if (!dataPath) {
+    reject(new Error('Cannot load the database'));
+  }
+  if (dataPath) {
+    fs.readFile(dataPath, (err, data) => {
+      if (err) {
+        reject(new Error('Cannot load the database'));
+      }
+      if (data) {
+        const reportParts = [];
+        const fileLines = data.toString('utf-8').trim().split('\n');
+        const studentGroups = {};
+        const dbFieldNames = fileLines[0].split(',');
+        const studentPropNames = dbFieldNames.slice(
+          0,
+          dbFieldNames.length - 1,
+        );
+
+        for (const line of fileLines.slice(1)) {
+          const studentRecord = line.split(',');
+          const studentPropValues = studentRecord.slice(
+            0,
+            studentRecord.length - 1,
+          );
+          const field = studentRecord[studentRecord.length - 1];
+          if (!Object.keys(studentGroups).includes(field)) {
+            studentGroups[field] = [];
+          }
+          const studentEntries = studentPropNames.map((propName, idx) => [
+            propName,
+            studentPropValues[idx],
+          ]);
+          studentGroups[field].push(Object.fromEntries(studentEntries));
+        }
+
+        const totalStudents = Object.values(studentGroups).reduce(
+          (pre, cur) => (pre || []).length + cur.length,
+        );
+        reportParts.push(`Number of students: ${totalStudents}`);
+        for (const [field, group] of Object.entries(studentGroups)) {
+          reportParts.push([
+            `Number of students in ${field}: ${group.length}.`,
+            'List:',
+            group.map((student) => student.firstname).join(', '),
+          ].join(' '));
+        }
+        resolve(reportParts.join('\n'));
+      }
     });
-};
+  }
+});
 
-// Function to count total number of students
-const countTotalStudents = (students) => {
-  return students.length;
-};
-
-// Function to count number of students in a specific field
-const countStudentsByField = (students, field) => {
-  return students.filter(student => student.field === field).length;
-};
-
-// Function to get list of students in a specific field
-const getListOfStudentsByField = (students, field) => {
-  const filteredStudents = students.filter(student => student.field === field);
-  return filteredStudents.map(student => student.firstname);
-};
-
-// Set up the route for /
-app.get('/', (req, res) => {
+app.get('/', (_, res) => {
   res.send('Hello Holberton School!');
 });
 
-// Set up the route for /students endpoint
-app.get('/students', (req, res) => {
-  // Read the CSV file and get the array of student objects
-  readCSV('database.csv', (error, students) => {
-    if (error) {
-      res.status(500).json({ error: 'Failed to read CSV file' });
-    } else {
-      const totalStudents = countTotalStudents(students);
-      const csStudents = countStudentsByField(students, 'CS');
-      const sweStudents = countStudentsByField(students, 'SWE');
-      const csStudentList = getListOfStudentsByField(students, 'CS');
-      const sweStudentList = getListOfStudentsByField(students, 'SWE');
+app.get('/students', (_, res) => {
+  const responseParts = ['This is the list of our students'];
 
-      const response = {
-        message: 'This is the list of our students',
-        'Number of students': totalStudents,
-        'Number of students in CS': csStudents,
-        'List of CS students': csStudentList,
-        'Number of students in SWE': sweStudents,
-        'List of SWE students': sweStudentList
-      };
-
-      res.json(response);
-    }
-  });
+  countStudents(DB_FILE)
+    .then((report) => {
+      responseParts.push(report);
+      const responseText = responseParts.join('\n');
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Length', responseText.length);
+      res.statusCode = 200;
+      res.write(Buffer.from(responseText));
+    })
+    .catch((err) => {
+      responseParts.push(err instanceof Error ? err.message : err.toString());
+      const responseText = responseParts.join('\n');
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Length', responseText.length);
+      res.statusCode = 200;
+      res.write(Buffer.from(responseText));
+    });
 });
 
-// Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server listening on PORT ${PORT}`);
 });
 
-module.exports = {
-  readCSV,
-  countTotalStudents,
-  countStudentsByField,
-  getListOfStudentsByField
-};
-
+module.exports = app;
