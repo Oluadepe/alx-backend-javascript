@@ -1,1 +1,1 @@
-This is a repository for ALX Backend Specialization Training Project
+This is a repository containg project specifically for backend using node
